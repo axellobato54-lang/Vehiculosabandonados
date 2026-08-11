@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro de Vehículos en Estado de Abandono | Dirección de Tránsito - Luján de Cuyo</title>
+<meta name="theme-color" content="#0a1628">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vehículos Abandono">
+<meta name="description" content="Registro y control de vehículos notificados en estado de abandono">
+<link rel="icon" id="appIcon" href="">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<link rel="manifest" id="appManifest" href="">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy-900:#0a1628;
+    --navy-800:#0f2144;
+    --navy-700:#16305f;
+    --navy-600:#1e3d75;
+    --gold-500:#c9a227;
+    --gold-400:#dab947;
+    --gold-100:#f7ecc6;
+    --paper:#f4f5f7;
+    --ink:#1c2431;
+    --muted:#6b7480;
+    --line:#dde1e7;
+    --ok:#1f7a4d;
+    --ok-bg:#e5f4ea;
+    --warn:#a35b00;
+    --warn-bg:#fdf1e0;
+    --danger:#b3261e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header.app-header{
+    background:linear-gradient(135deg,var(--navy-900),var(--navy-700));
+    color:#fff;
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    border-bottom:4px solid var(--gold-500);
+  }
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand-badge{
+    width:52px;height:52px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--gold-400), var(--gold-500) 65%, #8a6f14 100%);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;color:var(--navy-900);font-size:18px;
+    box-shadow:0 0 0 3px rgba(255,255,255,0.15);
+    flex-shrink:0;
+  }
+  .brand-text h1{margin:0;font-size:18px;letter-spacing:.3px;}
+  .brand-text p{margin:2px 0 0;font-size:12.5px;color:var(--gold-100);opacity:.9;}
+  .header-stats{display:flex;gap:10px;flex-wrap:wrap;}
+  .stat-pill{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(201,162,39,0.4);
+    padding:8px 14px;border-radius:8px;text-align:center;min-width:88px;
+  }
+  .stat-pill b{display:block;font-size:19px;color:var(--gold-400);}
+  .stat-pill span{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#cfd7e6;}
+
+  main{max-width:1280px;margin:0 auto;padding:22px 20px 60px;}
+
+  .panel{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    margin-bottom:20px;overflow:hidden;
+  }
+  .panel-head{
+    background:var(--navy-800);color:#fff;padding:12px 18px;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;flex-wrap:wrap;
+  }
+  .panel-head h2{margin:0;font-size:14.5px;letter-spacing:.4px;text-transform:uppercase;font-weight:600;}
+  .panel-head h2 .bar{color:var(--gold-400);margin-right:6px;}
+  .panel-body{padding:18px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;}
+  .field label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px;}
+  .field input,.field select{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+    font-size:13.5px;background:#fbfbfc;color:var(--ink);
+  }
+  .field input:focus,.field select:focus{outline:2px solid var(--navy-600);outline-offset:0;border-color:var(--navy-600);}
+  .field.full{grid-column:1/-1;}
+
+  .actions-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  button{
+    cursor:pointer;border:none;border-radius:7px;font-size:13.5px;font-weight:600;
+    padding:11px 20px;transition:filter .15s;
+  }
+  button:hover{filter:brightness(1.08);}
+  .btn-primary{background:var(--navy-800);color:#fff;}
+  .btn-gold{background:var(--gold-500);color:var(--navy-900);}
+  .btn-outline{background:#fff;color:var(--navy-800);border:1px solid var(--navy-700);}
+  .btn-danger{background:#fff;color:var(--danger);border:1px solid var(--danger);}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:5px;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;}
+  .toolbar .field{min-width:170px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{
+    background:var(--navy-700);color:#fff;text-align:left;padding:10px 8px;
+    position:sticky;top:0;font-weight:600;white-space:nowrap;
+  }
+  tbody td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:nth-child(even){background:#fafbfc;}
+  tbody tr:hover{background:#eef2f8;}
+  .table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;}
+
+  .badge{padding:4px 9px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;white-space:nowrap;}
+  .badge-pending{background:var(--warn-bg);color:var(--warn);}
+  .badge-ok{background:var(--ok-bg);color:var(--ok);}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);}
+  .empty b{color:var(--navy-800);display:block;font-size:15px;margin-bottom:4px;}
+
+  .row-actions{display:flex;gap:6px;flex-wrap:nowrap;}
+
+  footer{text-align:center;padding:22px;color:var(--muted);font-size:11.5px;}
+  footer b{color:var(--navy-800);}
+
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(10,22,40,0.55);
+    align-items:center;justify-content:center;z-index:50;padding:16px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:10px;max-width:420px;width:100%;overflow:hidden;border-top:4px solid var(--gold-500);}
+  .modal-head{padding:16px 18px;background:var(--navy-900);color:#fff;}
+  .modal-head h3{margin:0;font-size:15px;}
+  .modal-body{padding:18px;}
+  .modal-body .field{margin-bottom:12px;}
+  .modal-foot{padding:14px 18px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line);}
+
+  .toast{
+    position:fixed;bottom:22px;right:22px;background:var(--navy-900);color:#fff;
+    padding:13px 18px;border-radius:8px;border-left:4px solid var(--gold-500);
+    font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.25);display:none;z-index:60;max-width:320px;
+  }
+  .toast.show{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  @media(max-width:640px){
+    header.app-header{padding:16px;}
+    .brand-text h1{font-size:15.5px;}
+    main{padding:14px 10px 40px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div class="brand-badge">DT</div>
+    <div class="brand-text">
+      <h1>Registro de Vehículos en Estado de Abandono</h1>
+      <p>Dirección de Tránsito · Municipalidad de Luján de Cuyo</p>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill"><b id="statTotal">0</b><span>Total</span></div>
+    <div class="stat-pill"><b id="statPend">0</b><span>Pendientes</span></div>
+    <div class="stat-pill"><b id="statRet">0</b><span>Retirados</span></div>
+    <button class="btn-gold btn-sm" id="btnInstall" style="display:none;align-self:center;">⬇ Instalar app</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- FORM -->
+  <section class="panel">
+    <div class="panel-head"><h2><span class="bar">▍</span>Nuevo emplazamiento</h2></div>
+    <div class="panel-body">
+      <div class="grid">
+        <div class="field"><label>N.º de acta de emplazamiento</label><input type="text" id="fActa" placeholder="0001"></div>
+        <div class="field"><label>Inspector responsable</label>
+          <select id="fInspector">
+            <option value="Axel Lobato">Axel Lobato</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="field" id="fInspectorOtroWrap" style="display:none;"><label>Especificar inspector</label><input type="text" id="fInspectorOtro" placeholder="Nombre y apellido"></div>
+        <div class="field"><label>Distrito</label>
+          <select id="fDistrito">
+            <option value="">Seleccionar distrito</option>
+          </select>
+        </div>
+        <div class="field"><label>Fecha emplazado</label><input type="date" id="fFecha"></div>
+        <div class="field"><label>Hora emplazado</label><input type="time" id="fHora"></div>
+        <div class="field"><label>Dominio (patente)</label><input type="text" id="fDominio" placeholder="AB123CD" style="text-transform:uppercase"></div>
+        <div class="field"><label>Marca</label>
+          <select id="fMarca">
+            <option value="">Seleccionar marca</option>
+          </select>
+        </div>
+        <div class="field" id="fMarcaOtraWrap" style="display:none;"><label>Especificar marca</label><input type="text" id="fMarcaOtra" placeholder="Marca no listada"></div>
+        <div class="field"><label>Modelo</label><input type="text" id="fModelo" placeholder="Fiesta"></div>
+        <div class="field"><label>Color</label><input type="text" id="fColor" placeholder="Gris"></div>
+        <div class="field full"><label>Dirección</label><input type="text" id="fDireccion" placeholder="Calle, altura, entre calles"></div>
+        <div class="field"><label>Barrio</label><input type="text" id="fBarrio" placeholder="Barrio"></div>
+        <div class="field"><label>DNI titular</label><input type="text" id="fDni" placeholder="Solo números"></div>
+        <div class="field full"><label>Nombre y apellido titular</label><input type="text" id="fNombre" placeholder="Apellido, Nombre"></div>
+      </div>
+      <div class="actions-row">
+        <button class="btn-primary" id="btnAdd">+ Cargar emplazamiento</button>
+        <button class="btn-outline" id="btnClear">Limpiar formulario</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LISTADO -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2><span class="bar">▍</span>Listado de vehículos</h2>
+      <button class="btn-gold btn-sm" id="btnExport">⬇ Exportar a Excel</button>
+    </div>
+    <div class="panel-body">
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="field"><label>Buscar</label><input type="text" id="fBuscar" placeholder="Acta, distrito, dominio, dirección, inspector..."></div>
+        <div class="field"><label>Estado</label>
+          <select id="fEstadoFiltro">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="retirado">Retirados</option>
+          </select>
+        </div>
+        <div class="field"><button class="btn-outline" id="btnResetFiltro" style="width:100%;">Limpiar filtros</button></div>
+      </div>
+
+      <div class="table-wrap" id="tableWrap">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Creado por <b>Axel Lobato</b> · Dirección de Tránsito, Municipalidad de Luján de Cuyo</footer>
+
+<!-- MODAL RETIRO -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Registrar retiro del vehículo</h3></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Modalidad de retiro</label>
+        <select id="mModalidad">
+          <option value="Retirado por grúa contratada">Retirado por grúa contratada</option>
+          <option value="Grúa Tránsito Luján">Grúa Tránsito Luján</option>
+          <option value="Retirado por propietario">Retirado por propietario</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fecha de retiro</label>
+        <input type="date" id="mFecha">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-outline" id="mCancel">Cancelar</button>
+      <button class="btn-primary" id="mConfirm">Guardar retiro</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Eliminar registro</h3></div>
+    <div class="modal-body">
+      <p style="margin:0;font-size:13.5px;color:var(--ink);">Esta acción no se puede deshacer. ¿Confirmás que querés eliminar este registro definitivamente?</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-outline" onclick="cerrarModalDel()">Cancelar</button>
+      <button class="btn-danger" onclick="confirmarEliminar()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'dt_lujan_vehiculos_abandono_v1';
+let registros = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let editandoRetiroId = null;
+
+function guardar(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function uid(){
+  return 'v' + Date.now() + Math.random().toString(16).slice(2,6);
+}
+
+function fechaHoy(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+// listado de marcas para el selector
+const MARCAS = [
+  'Chevrolet','Ford','Fiat','Volkswagen','Renault','Peugeot','Citroën','Toyota',
+  'Honda','Nissan','Hyundai','Kia','Chery','JAC','Suzuki','Mitsubishi','Jeep',
+  'RAM','Mercedes-Benz','BMW','Audi','Volvo','Subaru','Mazda','Isuzu','Iveco',
+  'DS','Alfa Romeo','Lifan','Baic','Geely','SsangYong','Haval','Dodge','Chrysler',
+  'Daihatsu','Land Rover','Jaguar','Porsche','Mini','Smart','Yamaha','Honda Moto',
+  'Zanella','Motomel','Corven','Gilera','Guerrero','Keller','Suzuki Moto','Bajaj',
+  'Rouser','Otra'
+];
+const selMarca = document.getElementById('fMarca');
+MARCAS.forEach(m=>{
+  const opt = document.createElement('option');
+  opt.value = m;
+  opt.textContent = m;
+  selMarca.appendChild(opt);
+});
+selMarca.addEventListener('change', ()=>{
+  const wrap = document.getElementById('fMarcaOtraWrap');
+  if(selMarca.value === 'Otra'){
+    wrap.style.display = 'block';
+    document.getElementById('fMarcaOtra').focus();
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('fMarcaOtra').value = '';
+  }
+});
+
+const selInspector = document.getElementById('fInspector');
+selInspector.addEventListener('change', ()=>{
+  const wrap = document.getElementById('fInspectorOtroWrap');
+  if(selInspector.value === 'Otro'){
+    wrap.style.display = 'block';
+    document.getElementById('fInspectorOtro').focus();
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('fInspectorOtro').value = '';
+  }
+});
+
+// distritos de Luján de Cuyo
+const DISTRITOS = [
+  'Agrelo','Cacheuta','Carrodilla','Chacras de Coria','Ciudad','El Carrizal',
+  'Industrial','La Puntilla','Las Compuertas','Mayor Drummond','Perdriel',
+  'Potrerillos','Ugarteche','Vertientes del Pedemonte','Vistalba'
+];
+const selDistrito = document.getElementById('fDistrito');
+DISTRITOS.forEach(dist=>{
+  const opt = document.createElement('option');
+  opt.value = dist;
+  opt.textContent = dist;
+  selDistrito.appendChild(opt);
+});
+
+// set defaults
+document.getElementById('fFecha').value = fechaHoy();
+document.getElementById('fHora').value = new Date().toTimeString().slice(0,5);
+
+function diaSemana(fechaStr){
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const d = new Date(fechaStr + 'T00:00:00');
+  return dias[d.getDay()];
+}
+function mesNombre(fechaStr){
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const d = new Date(fechaStr + 'T00:00:00');
+  return meses[d.getMonth()];
+}
+
+function limpiarForm(){
+  ['fDominio','fModelo','fColor','fDireccion','fBarrio','fDni','fNombre','fMarcaOtra','fActa','fInspectorOtro'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fMarca').value = '';
+  document.getElementById('fMarcaOtraWrap').style.display = 'none';
+  document.getElementById('fInspector').value = 'Axel Lobato';
+  document.getElementById('fInspectorOtroWrap').style.display = 'none';
+  document.getElementById('fDistrito').value = '';
+  document.getElementById('fFecha').value = fechaHoy();
+  document.getElementById('fHora').value = new Date().toTimeString().slice(0,5);
+}
+
+document.getElementById('btnClear').addEventListener('click', limpiarForm);
+
+document.getElementById('btnAdd').addEventListener('click', ()=>{
+  const acta = document.getElementById('fActa').value.trim();
+  let inspector = document.getElementById('fInspector').value;
+  if(inspector === 'Otro'){
+    inspector = document.getElementById('fInspectorOtro').value.trim();
+  }
+  const distrito = document.getElementById('fDistrito').value;
+  const fecha = document.getElementById('fFecha').value;
+  const hora = document.getElementById('fHora').value;
+  const dominio = document.getElementById('fDominio').value.trim().toUpperCase();
+  let marca = document.getElementById('fMarca').value.trim();
+  if(marca === 'Otra'){
+    marca = document.getElementById('fMarcaOtra').value.trim();
+  }
+  const modelo = document.getElementById('fModelo').value.trim();
+  const color = document.getElementById('fColor').value.trim();
+  const direccion = document.getElementById('fDireccion').value.trim();
+  const barrio = document.getElementById('fBarrio').value.trim();
+  const dni = document.getElementById('fDni').value.trim();
+  const nombre = document.getElementById('fNombre').value.trim();
+
+  if(!acta || !fecha || !direccion || !dominio || !distrito){
+    toast('Completá al menos N.º de acta, distrito, fecha, dirección y dominio.');
+    return;
+  }
+
+  const reg = {
+    id: uid(),
+    acta, inspector, distrito,
+    fecha, hora,
+    dominio, marca, modelo, color,
+    direccion, barrio,
+    dni, nombre,
+    estado: 'pendiente',
+    retiroModalidad: '',
+    retiroFecha: '',
+    creado: new Date().toISOString()
+  };
+  registros.unshift(reg);
+  guardar();
+  limpiarForm();
+  render();
+  toast('Emplazamiento cargado correctamente.');
+});
+
+function abrirModalRetiro(id){
+  editandoRetiroId = id;
+  document.getElementById('mFecha').value = fechaHoy();
+  document.getElementById('mModalidad').value = 'Retirado por grúa contratada';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function cerrarModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  editandoRetiroId = null;
+}
+document.getElementById('mCancel').addEventListener('click', cerrarModal);
+document.getElementById('mConfirm').addEventListener('click', ()=>{
+  const reg = registros.find(r=>r.id===editandoRetiroId);
+  if(!reg) return;
+  reg.estado = 'retirado';
+  reg.retiroModalidad = document.getElementById('mModalidad').value;
+  reg.retiroFecha = document.getElementById('mFecha').value;
+  guardar();
+  cerrarModal();
+  render();
+  toast('Retiro registrado.');
+});
+
+function revertirRetiro(id){
+  const reg = registros.find(r=>r.id===id);
+  if(!reg) return;
+  reg.estado = 'pendiente';
+  reg.retiroModalidad = '';
+  reg.retiroFecha = '';
+  guardar();
+  render();
+  toast('Registro vuelto a estado pendiente.');
+}
+
+let idAEliminar = null;
+function eliminarRegistro(id){
+  idAEliminar = id;
+  document.getElementById('delModalOverlay').classList.add('open');
+}
+function cerrarModalDel(){
+  document.getElementById('delModalOverlay').classList.remove('open');
+  idAEliminar = null;
+}
+function confirmarEliminar(){
+  if(idAEliminar){
+    registros = registros.filter(r=>r.id!==idAEliminar);
+    guardar();
+    render();
+    toast('Registro eliminado.');
+  }
+  cerrarModalDel();
+}
+
+document.getElementById('fBuscar').addEventListener('input', render);
+document.getElementById('fEstadoFiltro').addEventListener('change', render);
+document.getElementById('btnResetFiltro').addEventListener('click', ()=>{
+  document.getElementById('fBuscar').value='';
+  document.getElementById('fEstadoFiltro').value='';
+  render();
+});
+
+function filtrados(){
+  const q = document.getElementById('fBuscar').value.trim().toLowerCase();
+  const estado = document.getElementById('fEstadoFiltro').value;
+  return registros.filter(r=>{
+    if(estado && r.estado !== estado) return false;
+    if(!q) return true;
+    const blob = [r.acta,r.inspector,r.distrito,r.dominio,r.direccion,r.barrio,r.nombre,r.dni,r.marca,r.modelo].join(' ').toLowerCase();
+    return blob.includes(q);
+  }).sort((a,b)=>{
+    // agrupa por distrito primero (alfabético), y dentro de cada distrito ordena por N.º de acta
+    const distA = (a.distrito||'').localeCompare(b.distrito||'', 'es');
+    if(distA !== 0) return distA;
+    const na = parseFloat(a.acta), nb = parseFloat(b.acta);
+    if(!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    return String(a.acta).localeCompare(String(b.acta), 'es', {numeric:true});
+  });
+}
+
+function render(){
+  const list = filtrados();
+  const wrap = document.getElementById('tableWrap');
+
+  document.getElementById('statTotal').textContent = registros.length;
+  document.getElementById('statPend').textContent = registros.filter(r=>r.estado==='pendiente').length;
+  document.getElementById('statRet').textContent = registros.filter(r=>r.estado==='retirado').length;
+
+  if(list.length === 0){
+    wrap.innerHTML = `<div class="empty"><b>Sin registros</b>Cargá un emplazamiento arriba o ajustá los filtros de búsqueda.</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>N.º Acta</th><th>Inspector</th><th>Distrito</th>
+    <th>Fecha</th><th>Día</th><th>Mes</th><th>Año</th><th>Hora</th>
+    <th>Dominio</th><th>Marca</th><th>Modelo</th><th>Color</th>
+    <th>Dirección</th><th>Barrio</th><th>DNI Titular</th><th>Nombre y Apellido</th>
+    <th>Estado</th><th>Detalle retiro</th><th>Acciones</th>
+  </tr></thead><tbody>`;
+
+  let distritoAnterior = null;
+  list.forEach(r=>{
+    if(r.distrito !== distritoAnterior){
+      html += `<tr><td colspan="19" style="background:var(--gold-100);color:var(--navy-900);font-weight:700;padding:7px 10px;border-top:2px solid var(--gold-500);">Distrito: ${r.distrito || 'Sin especificar'}</td></tr>`;
+      distritoAnterior = r.distrito;
+    }
+    const d = new Date(r.fecha + 'T00:00:00');
+    const badge = r.estado === 'retirado'
+      ? `<span class="badge badge-ok">Retirado</span>`
+      : `<span class="badge badge-pending">Pendiente</span>`;
+    const detalle = r.estado === 'retirado'
+      ? `${r.retiroModalidad}<br><small>${r.retiroFecha}</small>`
+      : '—';
+    const accionRetiro = r.estado === 'retirado'
+      ? `<button class="btn-outline btn-sm" onclick="revertirRetiro('${r.id}')">Revertir</button>`
+      : `<button class="btn-gold btn-sm" onclick="abrirModalRetiro('${r.id}')">Marcar retiro</button>`;
+
+    html += `<tr>
+      <td><b>${r.acta||''}</b></td>
+      <td>${r.inspector||''}</td>
+      <td>${r.distrito||''}</td>
+      <td>${r.fecha}</td>
+      <td>${diaSemana(r.fecha)}</td>
+      <td>${mesNombre(r.fecha)}</td>
+      <td>${d.getFullYear()}</td>
+      <td>${r.hora||''}</td>
+      <td><b>${r.dominio}</b></td>
+      <td>${r.marca}</td>
+      <td>${r.modelo}</td>
+      <td>${r.color}</td>
+      <td>${r.direccion}</td>
+      <td>${r.barrio}</td>
+      <td>${r.dni}</td>
+      <td>${r.nombre}</td>
+      <td>${badge}</td>
+      <td>${detalle}</td>
+      <td><div class="row-actions">${accionRetiro}<button class="btn-danger btn-sm" onclick="eliminarRegistro('${r.id}')">Eliminar</button></div></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  if(registros.length === 0){
+    toast('No hay registros para exportar.');
+    return;
+  }
+  const rows = registros.slice().sort((a,b)=>{
+    const distA = (a.distrito||'').localeCompare(b.distrito||'', 'es');
+    if(distA !== 0) return distA;
+    const na = parseFloat(a.acta), nb = parseFloat(b.acta);
+    if(!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    return String(a.acta).localeCompare(String(b.acta), 'es', {numeric:true});
+  }).map(r=>{
+    const d = new Date(r.fecha + 'T00:00:00');
+    return {
+      'N.º Acta de emplazamiento': r.acta,
+      'Inspector responsable': r.inspector,
+      'Distrito': r.distrito,
+      'Fecha emplazado': r.fecha,
+      'Día emplazado': diaSemana(r.fecha),
+      'Mes emplazado': mesNombre(r.fecha),
+      'Año emplazado': d.getFullYear(),
+      'Hora emplazado': r.hora,
+      'Dominio': r.dominio,
+      'Marca': r.marca,
+      'Modelo': r.modelo,
+      'Color': r.color,
+      'Dirección': r.direccion,
+      'Barrio': r.barrio,
+      'DNI Titular': r.dni,
+      'Nombre y Apellido': r.nombre,
+      'Estado': r.estado === 'retirado' ? 'Retirado' : 'Pendiente',
+      'Modalidad de retiro': r.retiroModalidad || '',
+      'Fecha de retiro': r.retiroFecha || ''
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:10},{wch:18},{wch:20},
+    {wch:13},{wch:11},{wch:11},{wch:9},{wch:9},
+    {wch:11},{wch:12},{wch:12},{wch:10},
+    {wch:28},{wch:16},{wch:12},{wch:24},
+    {wch:11},{wch:24},{wch:13}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vehículos abandono');
+  const fecha = fechaHoy();
+  XLSX.writeFile(wb, `Registro_Vehiculos_Abandono_${fecha}.xlsx`);
+  toast('Excel exportado correctamente.');
+});
+
+render();
+
+/* ===================== PWA: ícono, manifest e instalación ===================== */
+(function initPWA(){
+  // Ícono navy/gold en SVG (se usa como favicon, apple-touch-icon y en el manifest)
+  const iconSVG = `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="96" fill="#0a1628"/>
+    <rect width="512" height="512" rx="96" fill="none" stroke="#c9a227" stroke-width="10"/>
+    <circle cx="256" cy="230" r="150" fill="url(#g)"/>
+    <defs>
+      <radialGradient id="g" cx="35%" cy="30%" r="75%">
+        <stop offset="0%" stop-color="#dab947"/>
+        <stop offset="65%" stop-color="#c9a227"/>
+        <stop offset="100%" stop-color="#8a6f14"/>
+      </radialGradient>
+    </defs>
+    <text x="256" y="270" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="700"
+      text-anchor="middle" fill="#0a1628">DT</text>
+    <text x="256" y="440" font-family="Segoe UI, Arial, sans-serif" font-size="46" font-weight="600"
+      text-anchor="middle" fill="#dab947">TRÁNSITO</text>
+  </svg>`;
+  const iconBlob = new Blob([iconSVG], {type:'image/svg+xml'});
+  const iconURL = URL.createObjectURL(iconBlob);
+  document.getElementById('appIcon').href = iconURL;
+  document.getElementById('appleIcon').href = iconURL;
+
+  // Manifest de instalación
+  const manifest = {
+    name: "Registro de Vehículos en Estado de Abandono",
+    short_name: "Vehículos Abandono",
+    description: "Control y registro de vehículos notificados en estado de abandono",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#f4f5f7",
+    theme_color: "#0a1628",
+    orientation: "any",
+    icons: [
+      { src: iconURL, sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+      { src: iconURL, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+      { src: iconURL, sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
+    ]
+  };
+  const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  document.getElementById('appManifest').href = URL.createObjectURL(manifestBlob);
+
+  // Service worker mínimo (permite instalación y uso offline de la página ya cargada)
+  const swCode = `
+    const CACHE = 'vehiculos-abandono-v1';
+    self.addEventListener('install', e => { self.skipWaiting(); });
+    self.addEventListener('activate', e => { self.clients.claim(); });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(cached => {
+          if (cached) return cached;
+          return fetch(e.request).then(resp => {
+            const respClone = resp.clone();
+            caches.open(CACHE).then(cache => {
+              try { cache.put(e.request, respClone); } catch(err) {}
+            });
+            return resp;
+          }).catch(() => cached);
+        })
+      );
+    });
+  `;
+  if ('serviceWorker' in navigator) {
+    try {
+      const swBlob = new Blob([swCode], {type:'application/javascript'});
+      const swURL = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swURL).catch(()=>{ /* silencioso: algunos navegadores requieren mismo origen */ });
+    } catch(err) { /* si el navegador no permite SW desde blob, la app sigue funcionando igual */ }
+  }
+
+  // Botón de instalación (Chrome/Edge/Android)
+  let deferredPrompt = null;
+  const btnInstall = document.getElementById('btnInstall');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    btnInstall.style.display = 'inline-block';
+  });
+  btnInstall.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') toast('App instalada correctamente.');
+    deferredPrompt = null;
+    btnInstall.style.display = 'none';
+  });
+  window.addEventListener('appinstalled', () => {
+    toast('App instalada.');
+    btnInstall.style.display = 'none';
+  });
+})();
+</script>
+</body>
+</html>
